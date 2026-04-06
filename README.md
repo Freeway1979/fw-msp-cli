@@ -16,7 +16,7 @@ fw alarms list --box <name>
 # List flows with filtering
 fw flows list --limit 1000
 fw flows list --since 2h --stats
-fw flows list --query "region:CN" --blocked
+fw flows list --query "direction:outbound" --blocked
 ```
 
 ---

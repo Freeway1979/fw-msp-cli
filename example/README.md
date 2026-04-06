@@ -117,7 +117,7 @@ cp config.example.json config.json
 # Edit config.json with your AI provider settings
 node flow-analyzer.js                    # Analyze recent flows
 node flow-analyzer.js --limit=100        # Analyze 100 flows
-node flow-analyzer.js --query "region:CN"  # Analyze China traffic
+node flow-analyzer.js --query "direction:outbound"  # Analyze outbound traffic
 ```
 
 ## How It Works
