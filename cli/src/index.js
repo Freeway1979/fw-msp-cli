@@ -35,6 +35,7 @@ flows
   .option('--until <time>', 'Flows until (e.g., "2h", "30m", "1d", "2024-01-01")')
   .option('--blocked', 'Only show blocked flows')
   .option('--stats', 'Show aggregated statistics instead of raw data')
+  .option('--all', 'Fetch all results via auto-pagination (ignores limit)')
   .option('--groupBy <fields>', 'Group results (e.g., "domain,box")')
   .option('--sortBy <fields>', 'Sort results (e.g., "ts:desc,total:asc")')
   .option('--limit <n>', 'Max results (<=500, default 200)')

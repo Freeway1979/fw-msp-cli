@@ -87,60 +87,86 @@ const Flows = {
     }
 
     try {
-      const { data } = await client.get('/flows', { params: apiParams });
-      
-      // Stats mode: aggregate results
-      if (options.stats) {
-        const flows = data.results || [];
-        const stats = {
-          total_flows: flows.length,
-          total_download: 0,
-          total_upload: 0,
-          total_bytes: 0,
-          blocked_count: 0,
-          regular_count: 0,
-          unique_devices: new Set(),
-          unique_domains: new Set(),
-          unique_regions: new Set(),
-          protocols: {},
-          categories: {}
-        };
+      // Auto-pagination for --all flag
+      if (options.all) {
+        const allFlows = [];
+        let cursor = apiParams.cursor || null;
+        const batchSize = apiParams.limit || 500;
         
-        for (const flow of flows) {
-          stats.total_download += flow.download || 0;
-          stats.total_upload += flow.upload || 0;
-          stats.total_bytes += (flow.download || 0) + (flow.upload || 0);
+        do {
+          const params = { ...apiParams, limit: batchSize };
+          if (cursor) params.cursor = cursor;
           
-          if (flow.block) {
-            stats.blocked_count++;
-          } else {
-            stats.regular_count++;
-          }
-          
-          if (flow.device?.name) stats.unique_devices.add(flow.device.name);
-          if (flow.device?.ip) stats.unique_devices.add(flow.device.ip);
-          if (flow.destination?.name) stats.unique_domains.add(flow.destination.name);
-          if (flow.region) stats.unique_regions.add(flow.region);
-          
-          const proto = flow.protocol || 'unknown';
-          stats.protocols[proto] = (stats.protocols[proto] || 0) + 1;
-          
-          const cat = flow.category || '(none)';
-          stats.categories[cat] = (stats.categories[cat] || 0) + 1;
+          const { data } = await client.get('/flows', { params });
+          allFlows.push(...(data.results || []));
+          cursor = data.next_cursor || null;
+        } while (cursor);
+        
+        if (options.stats) {
+          const stats = computeStats(allFlows);
+          console.log(JSON.stringify(stats, null, 2));
+        } else {
+          console.log(JSON.stringify({ results: allFlows, count: allFlows.length }, null, 2));
         }
-        
-        stats.unique_devices = Array.from(stats.unique_devices);
-        stats.unique_domains = Array.from(stats.unique_domains);
-        stats.unique_regions = Array.from(stats.unique_regions);
-        
-        console.log(JSON.stringify(stats, null, 2));
       } else {
-        console.log(JSON.stringify(data, null, 2));
+        const { data } = await client.get('/flows', { params: apiParams });
+        
+        if (options.stats) {
+          const stats = computeStats(data.results || []);
+          console.log(JSON.stringify(stats, null, 2));
+        } else {
+          console.log(JSON.stringify(data, null, 2));
+        }
       }
     } catch (err) {
       console.error(JSON.stringify({ error: "Fetch failed", details: err.response?.data || err.message }));
     }
   }
 };
+
+function computeStats(flows) {
+  const stats = {
+    total_flows: flows.length,
+    total_download: 0,
+    total_upload: 0,
+    total_bytes: 0,
+    blocked_count: 0,
+    regular_count: 0,
+    unique_devices: new Set(),
+    unique_domains: new Set(),
+    unique_regions: new Set(),
+    protocols: {},
+    categories: {}
+  };
+  
+  for (const flow of flows) {
+    stats.total_download += flow.download || 0;
+    stats.total_upload += flow.upload || 0;
+    stats.total_bytes += (flow.download || 0) + (flow.upload || 0);
+    
+    if (flow.block) {
+      stats.blocked_count++;
+    } else {
+      stats.regular_count++;
+    }
+    
+    if (flow.device?.name) stats.unique_devices.add(flow.device.name);
+    if (flow.device?.ip) stats.unique_devices.add(flow.device.ip);
+    if (flow.destination?.name) stats.unique_domains.add(flow.destination.name);
+    if (flow.region) stats.unique_regions.add(flow.region);
+    
+    const proto = flow.protocol || 'unknown';
+    stats.protocols[proto] = (stats.protocols[proto] || 0) + 1;
+    
+    const cat = flow.category || '(none)';
+    stats.categories[cat] = (stats.categories[cat] || 0) + 1;
+  }
+  
+  stats.unique_devices = Array.from(stats.unique_devices);
+  stats.unique_domains = Array.from(stats.unique_domains);
+  stats.unique_regions = Array.from(stats.unique_regions);
+  
+  return stats;
+}
 
 module.exports = Flows;
