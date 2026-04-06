@@ -1,15 +1,53 @@
 const { getClient, resolveBoxGid } = require('../api/client');
 
+// Parse time string to Unix timestamp
+// Supports: "2h", "30m", "1d", "2024-01-01", "2024-01-01T12:00:00"
+function parseTime(timeStr) {
+  const now = Date.now() / 1000;
+  const match = timeStr.match(/^(\d+)([smhd])$/);
+  if (match) {
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    const multipliers = { s: 1, m: 60, h: 3600, d: 86400 };
+    return now - (value * multipliers[unit]);
+  }
+  const date = new Date(timeStr);
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid time format: ${timeStr}`);
+  }
+  return date.getTime() / 1000;
+}
+
 const Flows = {
   list: async (options) => {
     const gid = await resolveBoxGid(options.box, options);
     const client = getClient(options);
     
     let apiParams = { gid };
+    let queryParts = [];
     
-    // Pass through flow-specific parameters
+    // Build query from convenience flags
+    if (options.since) {
+      const ts = parseTime(options.since);
+      queryParts.push(`ts:>${ts}`);
+    }
+    
+    if (options.until) {
+      const ts = parseTime(options.until);
+      queryParts.push(`ts:<${ts}`);
+    }
+    
+    if (options.blocked) {
+      queryParts.push('block:true');
+    }
+    
+    // Add user-provided query
     if (options.query) {
-      apiParams.query = options.query;
+      queryParts.push(options.query);
+    }
+    
+    if (queryParts.length > 0) {
+      apiParams.query = queryParts.join(' ');
     }
     
     if (options.groupBy) {
@@ -50,7 +88,55 @@ const Flows = {
 
     try {
       const { data } = await client.get('/flows', { params: apiParams });
-      console.log(JSON.stringify(data, null, 2));
+      
+      // Stats mode: aggregate results
+      if (options.stats) {
+        const flows = data.results || [];
+        const stats = {
+          total_flows: flows.length,
+          total_download: 0,
+          total_upload: 0,
+          total_bytes: 0,
+          blocked_count: 0,
+          regular_count: 0,
+          unique_devices: new Set(),
+          unique_domains: new Set(),
+          unique_regions: new Set(),
+          protocols: {},
+          categories: {}
+        };
+        
+        for (const flow of flows) {
+          stats.total_download += flow.download || 0;
+          stats.total_upload += flow.upload || 0;
+          stats.total_bytes += (flow.download || 0) + (flow.upload || 0);
+          
+          if (flow.block) {
+            stats.blocked_count++;
+          } else {
+            stats.regular_count++;
+          }
+          
+          if (flow.device?.name) stats.unique_devices.add(flow.device.name);
+          if (flow.device?.ip) stats.unique_devices.add(flow.device.ip);
+          if (flow.destination?.name) stats.unique_domains.add(flow.destination.name);
+          if (flow.region) stats.unique_regions.add(flow.region);
+          
+          const proto = flow.protocol || 'unknown';
+          stats.protocols[proto] = (stats.protocols[proto] || 0) + 1;
+          
+          const cat = flow.category || '(none)';
+          stats.categories[cat] = (stats.categories[cat] || 0) + 1;
+        }
+        
+        stats.unique_devices = Array.from(stats.unique_devices);
+        stats.unique_domains = Array.from(stats.unique_domains);
+        stats.unique_regions = Array.from(stats.unique_regions);
+        
+        console.log(JSON.stringify(stats, null, 2));
+      } else {
+        console.log(JSON.stringify(data, null, 2));
+      }
     } catch (err) {
       console.error(JSON.stringify({ error: "Fetch failed", details: err.response?.data || err.message }));
     }
