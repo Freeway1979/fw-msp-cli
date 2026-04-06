@@ -75,14 +75,24 @@ Use with `query` inside `--params` to filter alarms. Combine multiple qualifiers
 
 ## Common Alarm Types
 
-Alarm types are identified by the `_type` field or numeric `type` ID. Common types include:
+Alarm types are identified by the `_type` field or numeric `type` ID. To see all alarm types in your environment:
 
-| Type ID | _type | Description |
-|---------|-------|-------------|
-| 12 | `ALARM_VPN_RESTORE` | Third-party VPN restored |
-| 13 | `ALARM_VPN_DISCONNECT` | Third-party VPN connection error |
+```bash
+fw alarms list --params '{"groupBy": "type", "limit": 50}'
+```
 
-> Note: Alarm type IDs may vary. Use the `_type` field for reliable identification. Query all types with: `fw alarms list --params '{"groupBy": "type", "limit": 50}'`
+**Verified alarm types in this environment:**
+
+| Type ID | Description |
+|---------|-------------|
+| 1 | Security Activity |
+| 2 | Abnormal Upload |
+| 5 | Device Online |
+| 12 | VPN Restored |
+| 13 | VPN Disconnected |
+| 15 | (varies) |
+
+> Note: Alarm type IDs and names may vary by environment. Always use `groupBy: type` to discover available types.
 
 ---
 
