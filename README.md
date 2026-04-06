@@ -7,6 +7,18 @@ A new CLI for all of Firewalla MSP to simplify your MSP API.
 
 Designed for both human operators and AI agents, `fw` outputs structured JSON by default, and relies on RESTful 1:1 API mappings.
 
+## Quick Start
+
+```bash
+# List alarms
+fw alarms list --box <name>
+
+# List flows with filtering
+fw flows list --limit 1000
+fw flows list --since 2h --stats
+fw flows list --query "region:CN" --blocked
+```
+
 ---
 
 ## Authentication
