@@ -61,6 +61,108 @@
 
 ---
 
+## Flows
+
+**Docs:** https://docs.firewalla.net/data-models/flow/  
+**API Reference:** `GET /v2/flows` https://docs.firewalla.net/api-reference/flow/
+
+### List Recent Flows
+
+**Input:** `fw flows list`  
+**API:** `GET /v2/flows?gid=xxx`  
+**Output:** Display recent network flows.
+
+```json
+{
+  "results": [
+    {
+      "ts": 1730447700.000,
+      "gid": "00000000-0000-0000-0000-000000000000",
+      "protocol": "tcp",
+      "direction": "outbound",
+      "block": false,
+      "download": 1024000,
+      "upload": 51200,
+      "duration": 30,
+      "count": 5,
+      "device": {
+        "id": "AA:BB:CC:DD:EE:FF",
+        "ip": "192.168.1.50",
+        "name": "iPhone"
+      },
+      "destination": {
+        "id": "google.com",
+        "name": "google.com",
+        "ip": "142.250.80.46"
+      },
+      "region": "US",
+      "category": "search",
+      "network": {
+        "id": "00000000-1111-1111-1111-000000000000",
+        "name": "Main Network"
+      }
+    }
+  ],
+  "next_cursor": "example_cursor_value",
+  "count": 1
+}
+```
+
+### Filtered Flows
+
+**Input:** `fw flows list --query "Device:iphone direction:outbound"`  
+**API:** `GET /v2/flows?gid=xxx&query=Device:iphone+direction:outbound`  
+**Output:** Flows matching the query.
+
+### Grouped & Sorted Flows
+
+**Input:** `fw flows list --groupBy domain --sortBy total:desc --limit 50`  
+**API:** `GET /v2/flows?gid=xxx&groupBy=domain&sortBy=total:desc&limit=50`  
+**Output:** Top 50 domains by total traffic.
+
+### Flow Query Qualifiers
+
+| Qualifier | Alias | Example |
+|-----------|-------|---------|
+| `ts` | | `ts:<1695196894` |
+| `status` | | `status:ok` |
+| `direction` | | `direction:outbound` |
+| `box.name` | Box | `Box:FirewallaGold` |
+| `device.id` | Mac | `Mac:"AA:BB:CC:DD:EE:FF"` |
+| `device.name` | Device | `Device:iphone` |
+| `network.name` | Network | `Network:Guest` |
+| `category` | Category | `Category:vpn,game` |
+| `domain` | Domain | `Domain:google.com` |
+| `region` | Region | `Region:US` |
+| `sport` | SourcePort | `SourcePort:123` |
+| `dport` | DestinationPort | `DestinationPort:443` |
+| `download` | Download | `Download:>10MB` |
+| `upload` | Upload | `Upload:>10MB` |
+| `total` | Total | `Total:>50MB` |
+
+### Flow Data Model
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ts` | Number | Unix timestamp when flow ended |
+| `gid` | String | Firewalla box unique identifier |
+| `protocol` | String | `tcp` or `udp` |
+| `direction` | String | `inbound`, `outbound`, or `local` |
+| `block` | Boolean | Whether this is a blocked flow |
+| `blockType` | String | `ip` or `dns` (only on blocked flows) |
+| `download` | Number | Bytes downloaded (regular flows only) |
+| `upload` | Number | Bytes uploaded (regular flows only) |
+| `duration` | Number | Duration in seconds (regular flows only) |
+| `count` | Number | TCP connections/UDP sessions or block count |
+| `device` | Object | Device info (id, ip, name) |
+| `source` | Object | Source host info (optional) |
+| `destination` | Object | Destination host info (optional) |
+| `region` | String | 2-letter ISO country code |
+| `category` | String | Host category (ad, edu, games, vpn, etc.) |
+| `network` | Object | Network info (id, name) |
+
+---
+
 ## Environment Variables
 
 | Variable | Description |

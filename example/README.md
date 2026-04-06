@@ -1,16 +1,6 @@
-# Alarm Processor Prototype
+# AI Analysis Examples
 
-AI-powered alarm analysis for Firewalla. Reads alarms, analyzes them with AI, and recommends actions.
-
-## Quick Start
-
-```bash
-cd example
-cp config.example.json config.json
-# Edit config.json with your AI provider settings
-node alarm-processor.js        # Get all alarms
-node alarm-processor.js --limit=20  # Get only 20 alarms
-```
+AI-powered analysis examples for Firewalla alarms and flows.
 
 ## Configuration
 
@@ -90,28 +80,52 @@ All providers use OpenAI-compatible format:
 }
 ```
 
-## Actions
+---
 
-The AI analyzes each alarm and recommends:
+# Alarm Processor
 
-| Action | Description |
-|--------|-------------|
-| `block` | High-risk threat, create firewall rule |
-| `delete` | False positive or resolved, remove alarm |
-| `ignore` | Low-risk or informational, no action |
+Reads alarms, analyzes them with AI, and recommends actions.
 
-## Options
+## Quick Start
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `limit` (CLI) | Number of alarms to process via `--limit=N` | Get all alarms |
+```bash
+cd example
+cp config.example.json config.json
+# Edit config.json with your AI provider settings
+node alarm-processor.js        # Get all alarms
+node alarm-processor.js --limit=20  # Get only 20 alarms
+```
 
 ## How It Works
 
 1. Fetches alarms using `fw alarms list`
 2. Sends each alarm to AI for analysis
 3. AI returns risk score (0-10) and recommended action
-4. Executes action (or logs in dry-run mode)
+4. Outputs analysis results
+
+---
+
+# Flow Analyzer
+
+Analyzes network flows with AI for anomalies and security insights.
+
+## Quick Start
+
+```bash
+cd example
+cp config.example.json config.json
+# Edit config.json with your AI provider settings
+node flow-analyzer.js                    # Analyze recent flows
+node flow-analyzer.js --limit=100        # Analyze 100 flows
+node flow-analyzer.js --query "direction:outbound"  # Analyze outbound traffic
+```
+
+## How It Works
+
+1. Fetches flows using `fw flows list`
+2. Sends flow data to AI for analysis
+3. AI identifies anomalies, suspicious traffic, and security concerns
+4. Outputs risk scores and recommendations
 
 ## Adding Custom LLMs
 
