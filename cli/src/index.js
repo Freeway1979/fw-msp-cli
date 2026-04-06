@@ -38,7 +38,7 @@ flows
   .option('--all', 'Fetch all results via auto-pagination (ignores limit)')
   .option('--groupBy <fields>', 'Group results (e.g., "domain,box")')
   .option('--sortBy <fields>', 'Sort results (e.g., "ts:desc,total:asc")')
-  .option('--limit <n>', 'Max results (<=500, default 200)')
+  .option('--limit <n>', 'Max results (auto-paginates if >500, default 200)')
   .option('--cursor <cursor>', 'Pagination cursor')
   .option('--params <json>', 'Raw API parameters')
   .action((options) => {

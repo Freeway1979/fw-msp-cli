@@ -58,17 +58,13 @@ const Flows = {
       apiParams.sortBy = options.sortBy;
     }
     
+    let targetLimit = null;
     if (options.limit) {
-      const limit = parseInt(options.limit);
-      if (isNaN(limit) || limit <= 0) {
+      targetLimit = parseInt(options.limit);
+      if (isNaN(targetLimit) || targetLimit <= 0) {
         console.error(JSON.stringify({ error: "Invalid limit value. Must be a positive integer." }));
         process.exit(1);
       }
-      if (limit > 500) {
-        console.error(JSON.stringify({ error: "Limit exceeds maximum value of 500." }));
-        process.exit(1);
-      }
-      apiParams.limit = limit;
     }
     
     if (options.cursor) {
@@ -87,11 +83,13 @@ const Flows = {
     }
 
     try {
-      // Auto-pagination for --all flag
-      if (options.all) {
+      // Auto-pagination when limit > 500 or --all flag
+      const shouldPaginate = options.all || (targetLimit && targetLimit > 500);
+      
+      if (shouldPaginate) {
         const allFlows = [];
         let cursor = apiParams.cursor || null;
-        const batchSize = apiParams.limit || 500;
+        const batchSize = 500;
         
         do {
           const params = { ...apiParams, limit: batchSize };
@@ -100,6 +98,12 @@ const Flows = {
           const { data } = await client.get('/flows', { params });
           allFlows.push(...(data.results || []));
           cursor = data.next_cursor || null;
+          
+          // Stop if we've reached the target limit
+          if (targetLimit && allFlows.length >= targetLimit) {
+            allFlows.length = targetLimit; // Trim to exact limit
+            break;
+          }
         } while (cursor);
         
         if (options.stats) {
@@ -109,6 +113,11 @@ const Flows = {
           console.log(JSON.stringify({ results: allFlows, count: allFlows.length }, null, 2));
         }
       } else {
+        // Single request mode
+        if (targetLimit) {
+          apiParams.limit = targetLimit;
+        }
+        
         const { data } = await client.get('/flows', { params: apiParams });
         
         if (options.stats) {
