@@ -2,6 +2,7 @@
 require('dotenv').config();
 const { Command } = require('commander');
 const Alarms = require('./commands/alarms');
+const Flows = require('./commands/flows');
 
 const program = new Command();
 
@@ -21,6 +22,22 @@ alarms
   .option('--params <json>', 'API filters')
   .action((options) => {
     Alarms.list({ ...options, ...program.opts() });
+  });
+
+const flows = program.command('flows').description('Manage network flows');
+
+flows
+  .command('list')
+  .description('List network flows with flexible filtering')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .option('--query <query>', 'Search query (e.g., "Device:iphone direction:outbound")')
+  .option('--groupBy <fields>', 'Group results (e.g., "domain,box")')
+  .option('--sortBy <fields>', 'Sort results (e.g., "ts:desc,total:asc")')
+  .option('--limit <n>', 'Max results (<=500, default 200)')
+  .option('--cursor <cursor>', 'Pagination cursor')
+  .option('--params <json>', 'Raw API parameters')
+  .action((options) => {
+    Flows.list({ ...options, ...program.opts() });
   });
 
 program.parse(process.argv);
