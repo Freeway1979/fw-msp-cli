@@ -38,7 +38,7 @@ const Flows = {
     }
     
     if (options.blocked) {
-      queryParts.push('block:true');
+      queryParts.push('status:blocked');
     }
     
     // Add user-provided query

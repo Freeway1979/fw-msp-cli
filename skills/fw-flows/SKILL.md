@@ -69,7 +69,6 @@ Use with `--query` to filter flows. Combine multiple qualifiers with spaces.
 | `direction` | | `direction:outbound`, `direction:inbound`, `direction:local` |
 | `status` | | `status:ok`, `status:blocked` |
 | `protocol` | | `protocol:tcp`, `protocol:udp` |
-| `block` | | `block:true`, `block:false` |
 
 ### Destination Intelligence
 | Qualifier | Alias | Example |
@@ -128,7 +127,7 @@ fw flows list --query "Category:intel" --limit 100
 fw flows list --query "Category:vpn,gambling" --limit 100
 
 # Blocked intel traffic
-fw flows list --query "Category:intel block:true" --limit 100
+fw flows list --query "Category:intel status:blocked" --limit 100
 ```
 
 ### Region-Based Filtering
