@@ -4,6 +4,7 @@ const { Command } = require('commander');
 const Alarms = require('./commands/alarms');
 const Devices = require('./commands/devices');
 const Flows = require('./commands/flows');
+const Rules = require('./commands/rules');
 
 const program = new Command();
 
@@ -93,6 +94,47 @@ flows
   .option('--params <json>', 'Raw API parameters')
   .action((options) => {
     Flows.list({ ...options, ...program.opts() });
+  });
+
+const rules = program.command('rules').description('Manage firewall rules');
+
+rules
+  .command('list')
+  .description('List all rules with optional filtering')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .option('--action <action>', 'Filter by action: block, allow, disturb, timelimit')
+  .option('--status <status>', 'Filter by status: active, paused')
+  .option('--target-type <type>', 'Filter by target type: domain, ip, app, category, internet, remotePort, targetlist, intranet')
+  .option('--scope-type <type>', 'Filter by scope type: device, group, network, user')
+  .option('--query <text>', 'Search in target value or notes (substring)')
+  .option('--hits', 'Only show rules that have been triggered at least once')
+  .option('--params <json>', 'Raw API parameters')
+  .action((options) => {
+    Rules.list({ ...options, ...program.opts() });
+  });
+
+rules
+  .command('get <id>')
+  .description('Get a rule by its numeric ID')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .action((id, options) => {
+    Rules.get(id, { ...options, ...program.opts() });
+  });
+
+rules
+  .command('pause <id>')
+  .description('Pause a rule by its numeric ID (requires API support)')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .action((id, options) => {
+    Rules.pause(id, { ...options, ...program.opts() });
+  });
+
+rules
+  .command('resume <id>')
+  .description('Resume a paused rule by its numeric ID (requires API support)')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .action((id, options) => {
+    Rules.resume(id, { ...options, ...program.opts() });
   });
 
 program.parse(process.argv);
