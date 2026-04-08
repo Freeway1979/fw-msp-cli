@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 """
 Security alarm analyzer — identifies patterns, risks, and network health.
-"""
-import json, collections, datetime
 
-FILE = "/tmp/alarms_1000.json"
+Usage:
+  python3 analyze_alarms.py [file]     # defaults to /tmp/alarms.json
+  python3 analyze_alarms.py /tmp/alarms_1000.json
+"""
+import json, collections, datetime, re, sys
+
+def redact_ips(text):
+    """Replace IPv4 with [x.x.x.x] and IPv6 with [ipv6] in freeform text."""
+    text = re.sub(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', '[x.x.x.x]', str(text))
+    text = re.sub(r'([0-9a-fA-F]{1,4}:){3,}[0-9a-fA-F:/]+', '[ipv6]', text)
+    return text
+
+FILE = sys.argv[1] if len(sys.argv) > 1 else "/tmp/alarms.json"
 
 with open(FILE) as f:
     alarms = json.load(f)
@@ -56,27 +66,27 @@ for a in alarms:
 
     # Security activity alarms (type 1)
     if a.get("type") == 1 or _type == "ALARM_SECURITY":
-        security_alarms.append({"aid": aid, "device": device_name, "msg": msg, "ts": dt, "cloud": cloud, "region": region})
+        security_alarms.append({"aid": aid, "device": device_name, "msg": redact_ips(msg), "ts": dt, "cloud": cloud, "region": region})
 
     # Large uploads (type 2 / 16)
     if _type in ("ALARM_LARGE_UPLOAD", "ALARM_LARGE_UPLOAD_2"):
         upload_mb = round(upload / 1024 / 1024, 1)
         if not domain and remote_ip:
-            raw_ip_alarms.append({"aid": aid, "device": device_name, "dest": remote_ip, "upload_mb": upload_mb, "region": region, "ts": dt})
+            raw_ip_alarms.append({"aid": aid, "device": device_name, "dest": redact_ips(remote_ip), "upload_mb": upload_mb, "region": region, "ts": dt})
         if _type == "ALARM_LARGE_UPLOAD_2":
-            large_uploads.append({"aid": aid, "device": device_name, "dest": domain or remote_ip, "upload_mb": upload_mb, "ts": dt})
+            large_uploads.append({"aid": aid, "device": device_name, "dest": redact_ips(domain or remote_ip), "upload_mb": upload_mb, "ts": dt})
 
     # Non-US remote
     if region and region not in ("US", ""):
-        non_us.append({"aid": aid, "type": _type, "device": device_name, "dest": domain or remote_ip, "region": region, "ts": dt, "cloud": cloud, "status": STATUS.get(status)})
+        non_us.append({"aid": aid, "type": _type, "device": device_name, "dest": redact_ips(domain or remote_ip), "region": region, "ts": dt, "cloud": cloud, "status": STATUS.get(status)})
 
     # Unknown/unidentified devices
     if device_name in ("unknown", "") and status == 1:
-        unknown_devices.append({"aid": aid, "type": _type, "msg": msg[:80], "ts": dt})
+        unknown_devices.append({"aid": aid, "type": _type, "msg": redact_ips(msg)[:80], "ts": dt})
 
     # Active alarms with no cloud verdict — needs manual review
     if status == 1 and cloud == "":
-        interesting.append({"aid": aid, "type": _type, "device": device_name, "msg": msg[:100], "ts": dt})
+        interesting.append({"aid": aid, "type": _type, "device": device_name, "msg": redact_ips(msg)[:100], "ts": dt})
 
 # Summarize non-US by region
 non_us_by_region = collections.Counter(n["region"] for n in non_us)
@@ -105,7 +115,7 @@ print()
 
 print(f"--- SECURITY ACTIVITY ALARMS (type=1) ({len(security_alarms)}) ---")
 for s in security_alarms[:20]:
-    print(f"  [aid:{s['aid']}] [{s['ts']}] [{s['region']}] {s['device']} | {s['msg'][:100]} | cloud:{s['cloud']}")
+    print(f"  [aid:{s['aid']}] [{s['ts']}] [{s['region']}] {s['device']} | {s['msg'][:100]} | cloud:{s['cloud'] or '(none)'}")
 if len(security_alarms) > 20:
     print(f"  ... and {len(security_alarms)-20} more")
 print()
