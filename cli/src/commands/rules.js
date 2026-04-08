@@ -99,21 +99,25 @@ const Rules = {
   },
 
   pause: async (id, options) => {
-    console.error(JSON.stringify({
-      error: 'Not supported',
-      details: 'The Firewalla MSP REST API does not expose a pause endpoint for rules.',
-      hint: 'Use the Firewalla app or web dashboard to pause rule ' + id + '.',
-    }));
-    process.exit(1);
+    const gid = await resolveBoxGid(options.box, options);
+    const client = getClient(options);
+    try {
+      const { data } = await client.post(`/rules/${gid}:${id}/pause`, {});
+      console.log(JSON.stringify(data ?? { ok: true }, null, 2));
+    } catch (err) {
+      console.error(JSON.stringify({ error: 'Pause failed', status: err.response?.status, details: err.response?.data || err.message }));
+    }
   },
 
   resume: async (id, options) => {
-    console.error(JSON.stringify({
-      error: 'Not supported',
-      details: 'The Firewalla MSP REST API does not expose a resume endpoint for rules.',
-      hint: 'Use the Firewalla app or web dashboard to resume rule ' + id + '.',
-    }));
-    process.exit(1);
+    const gid = await resolveBoxGid(options.box, options);
+    const client = getClient(options);
+    try {
+      const { data } = await client.post(`/rules/${gid}:${id}/resume`, {});
+      console.log(JSON.stringify(data ?? { ok: true }, null, 2));
+    } catch (err) {
+      console.error(JSON.stringify({ error: 'Resume failed', status: err.response?.status, details: err.response?.data || err.message }));
+    }
   },
 };
 
