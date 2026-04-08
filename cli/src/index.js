@@ -5,6 +5,7 @@ const Alarms = require('./commands/alarms');
 const Devices = require('./commands/devices');
 const Flows = require('./commands/flows');
 const Rules = require('./commands/rules');
+const TargetLists = require('./commands/target-lists');
 
 const program = new Command();
 
@@ -135,6 +136,55 @@ rules
   .option('--box <name|gid>', 'Box Name or GID')
   .action((id, options) => {
     Rules.resume(id, { ...options, ...program.opts() });
+  });
+
+const targetLists = program.command('target-lists').description('Manage target lists');
+
+targetLists
+  .command('list')
+  .description('List all target lists')
+  .option('--owner <owner>', 'Filter by owner: firewalla, global')
+  .option('--query <text>', 'Search by name, ID, or notes (substring)')
+  .action((options) => {
+    TargetLists.list({ ...options, ...program.opts() });
+  });
+
+targetLists
+  .command('get <id>')
+  .description('Get a target list by ID or name (includes full targets array)')
+  .action((id, options) => {
+    TargetLists.get(id, { ...options, ...program.opts() });
+  });
+
+targetLists
+  .command('create')
+  .description('Create a new target list')
+  .requiredOption('--name <name>', 'Target list name')
+  .option('--targets <list>', 'Comma-separated or JSON array of targets')
+  .option('--block-mode <mode>', 'Block mode: domainOnly, default (default: domainOnly)')
+  .option('--notes <text>', 'Description notes')
+  .action((options) => {
+    TargetLists.create({ ...options, ...program.opts() });
+  });
+
+targetLists
+  .command('update <id>')
+  .description('Update a target list by ID or name')
+  .option('--name <name>', 'New name')
+  .option('--targets <list>', 'Replace targets (comma-separated or JSON array)')
+  .option('--add <targets>', 'Add targets to the list (comma-separated)')
+  .option('--remove <targets>', 'Remove targets from the list (comma-separated)')
+  .option('--block-mode <mode>', 'Block mode: domainOnly, default')
+  .option('--notes <text>', 'Update description notes')
+  .action((id, options) => {
+    TargetLists.update(id, { ...options, ...program.opts() });
+  });
+
+targetLists
+  .command('delete <id>')
+  .description('Delete a user-owned target list by ID or name')
+  .action((id, options) => {
+    TargetLists.delete(id, { ...options, ...program.opts() });
   });
 
 program.parse(process.argv);
