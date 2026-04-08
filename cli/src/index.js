@@ -24,6 +24,22 @@ alarms
     Alarms.list({ ...options, ...program.opts() });
   });
 
+alarms
+  .command('archive <aid>')
+  .description('Archive (dismiss) an alarm by ID')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .action((aid, options) => {
+    Alarms.archive(aid, { ...options, ...program.opts() });
+  });
+
+alarms
+  .command('delete <aid>')
+  .description('Permanently delete an alarm by ID')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .action((aid, options) => {
+    Alarms.delete(aid, { ...options, ...program.opts() });
+  });
+
 const flows = program.command('flows').description('Manage network flows');
 
 flows

@@ -94,11 +94,29 @@ const Flows = {
         do {
           const params = { ...apiParams, limit: batchSize };
           if (cursor) params.cursor = cursor;
-          
-          const { data } = await client.get('/flows', { params });
+
+          let data;
+          let delay = 2000;
+          for (let attempt = 1; attempt <= 5; attempt++) {
+            try {
+              ({ data } = await client.get('/flows', { params }));
+              break;
+            } catch (err) {
+              if (err.response?.status === 429 && attempt < 5) {
+                process.stderr.write(`Rate limited, retrying in ${delay / 1000}s... (attempt ${attempt}/5)\n`);
+                await new Promise(r => setTimeout(r, delay));
+                delay *= 2;
+              } else {
+                throw err;
+              }
+            }
+          }
+
           allFlows.push(...(data.results || []));
           cursor = data.next_cursor || null;
-          
+
+          if (cursor) await new Promise(r => setTimeout(r, 500));
+
           // Stop if we've reached the target limit
           if (targetLimit && allFlows.length >= targetLimit) {
             allFlows.length = targetLimit; // Trim to exact limit
