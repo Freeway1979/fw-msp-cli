@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Firewalla Alarm Processor with AI Analysis
- * 
+ *
  * Reads alarms, analyzes them with AI, and takes action based on risk score.
  * Supports multiple AI providers: OpenAI, Anthropic, OpenRouter, Ollama
  */
@@ -19,20 +19,16 @@ if (!fs.existsSync(configPath)) {
 }
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
-// No hardcoded providers - all configuration comes from config.json
+// Normalize config: support both single provider and providers array
+const providers = config.providers || [{ name: config.model, ...config }];
 
 /**
- * Call AI to analyze an alarm
+ * Call AI to analyze an alarm using a specific provider
  */
-async function analyzeAlarm(alarm) {
-  // Require baseUrl in config (format is always openai now)
-  if (!config.baseUrl) {
-    throw new Error('config.json must include baseUrl');
+async function analyzeAlarm(alarm, provider) {
+  if (!provider.baseUrl) {
+    throw new Error('provider must include baseUrl');
   }
-  const provider = {
-    baseUrl: config.baseUrl,
-    format: 'openai'
-  };
 
   const prompt = `You are a network security analyst. Analyze this Firewalla alarm and respond with ONLY a JSON object (no markdown, no explanation).
 
@@ -57,7 +53,7 @@ Guidelines:
   let delay = 2000;
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      const response = await callOpenAICompatible(provider.baseUrl, prompt, provider);
+      const response = await callOpenAICompatible(provider, prompt);
 
       // Parse the AI response
       const content = response.choices?.[0]?.message?.content || response.content?.[0]?.text || '';
@@ -71,11 +67,11 @@ Guidelines:
       return JSON.parse(jsonMatch[0]);
     } catch (err) {
       if (err.response?.status === 429 && attempt < 5) {
-        console.warn(`Rate limited, retrying in ${delay / 1000}s... (attempt ${attempt}/5)`);
+        console.warn(`[${provider.name}] Rate limited, retrying in ${delay / 1000}s... (attempt ${attempt}/5)`);
         await new Promise(r => setTimeout(r, delay));
         delay *= 2;
       } else {
-        console.error('AI analysis failed:', err.message);
+        console.error(`[${provider.name}] AI analysis failed:`, err.message);
         return { risk_score: 5, action: 'ignore', reason: 'AI analysis failed' };
       }
     }
@@ -85,14 +81,14 @@ Guidelines:
 /**
  * Call OpenAI-compatible API (OpenAI, OpenRouter, Ollama, etc.)
  */
-async function callOpenAICompatible(baseUrl, prompt, provider = {}) {
-  const response = await axios.post(`${baseUrl}/chat/completions`, {
-    model: config.model,
+async function callOpenAICompatible(provider, prompt) {
+  const response = await axios.post(`${provider.baseUrl}/chat/completions`, {
+    model: provider.model,
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.1
   }, {
     headers: {
-      'Authorization': `Bearer ${config.apiKey}`,
+      'Authorization': `Bearer ${provider.apiKey}`,
       'Content-Type': 'application/json'
     }
   });
@@ -175,11 +171,19 @@ OPTIONS:
   --help, -h             Show this help message
 
 SETUP:
-  Requires ~/llm_config.json with:
+  Requires ~/llm_config.json - single provider:
     {
       "baseUrl": "https://api.anthropic.com/v1",
       "apiKey":  "your-api-key",
       "model":   "claude-sonnet-4-6"
+    }
+
+  Or multiple providers for comparison:
+    {
+      "providers": [
+        { "name": "Claude", "baseUrl": "https://api.anthropic.com/v1", "apiKey": "sk-ant-...", "model": "claude-sonnet-4-6" },
+        { "name": "GPT-4",  "baseUrl": "https://api.openai.com/v1",    "apiKey": "sk-...",     "model": "gpt-4o" }
+      ]
     }
 
   Requires environment variables:
@@ -215,12 +219,11 @@ EXAMPLES:
 async function main() {
   // Parse command line arguments
   const cliArgs = parseArgs();
-  
+
   console.log('Firewalla Alarm Processor');
   console.log('========================\n');
-  console.log(`Provider: OpenAI-compatible`);
-  console.log(`Model: ${config.model}\n`);
-  
+  console.log(`Providers: ${providers.map(p => p.name).join(', ')}\n`);
+
   // Build API params
   const apiParams = {};
   let limitLog = 'all';
@@ -263,15 +266,21 @@ async function main() {
   // Process each alarm
   for (let i = 0; i < alarms.length; i++) {
     if (i > 0) await new Promise(r => setTimeout(r, 1000));
-    const analysis = await analyzeAlarm(alarms[i]);
+    const alarm = alarms[i];
 
-    console.log(`\n--- Alarm ${alarms[i].aid} ---`);
-    console.log(`Type: ${alarms[i]._type}`);
-    console.log(`Message: ${alarms[i].message}`);
-    console.log(`AI Analysis:`);
-    console.log(`  Risk Score: ${analysis.risk_score}/10`);
-    console.log(`  Suggested Action: ${analysis.action}`);
-    console.log(`  Reason: ${analysis.reason}`);
+    // Run all providers in parallel
+    const results = await Promise.all(providers.map(p => analyzeAlarm(alarm, p)));
+
+    console.log(`\n--- Alarm ${alarm.aid} ---`);
+    console.log(`Type: ${alarm._type}`);
+    console.log(`Message: ${alarm.message}`);
+
+    results.forEach((analysis, idx) => {
+      console.log(`\n  [${providers[idx].name}]`);
+      console.log(`    Risk Score:       ${analysis.risk_score}/10`);
+      console.log(`    Suggested Action: ${analysis.action}`);
+      console.log(`    Reason:           ${analysis.reason}`);
+    });
   }
 }
 
