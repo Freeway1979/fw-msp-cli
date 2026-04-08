@@ -2,6 +2,7 @@
 require('dotenv').config();
 const { Command } = require('commander');
 const Alarms = require('./commands/alarms');
+const Devices = require('./commands/devices');
 const Flows = require('./commands/flows');
 
 const program = new Command();
@@ -38,6 +39,39 @@ alarms
   .option('--box <name|gid>', 'Box Name or GID')
   .action((aid, options) => {
     Alarms.delete(aid, { ...options, ...program.opts() });
+  });
+
+const devices = program.command('devices').description('Manage network devices');
+
+devices
+  .command('list')
+  .description('List devices on a specific box')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .option('--online', 'Only show online devices')
+  .option('--offline', 'Only show offline devices')
+  .option('--group <name>', 'Filter by group name (e.g. "Quarantine")')
+  .option('--network <name>', 'Filter by network name (e.g. "LAN 1")')
+  .option('--type <type>', 'Filter by device type (e.g. "camera", "phone")')
+  .option('--query <query>', 'Search by name, IP, MAC, or vendor (substring)')
+  .option('--params <json>', 'Raw API parameters')
+  .action((options) => {
+    Devices.list({ ...options, ...program.opts() });
+  });
+
+devices
+  .command('get <id>')
+  .description('Get a device by MAC address, IP, or name')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .action((id, options) => {
+    Devices.get(id, { ...options, ...program.opts() });
+  });
+
+devices
+  .command('rename <id> <name>')
+  .description('Rename a device (resolve by MAC, IP, or current name)')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .action((id, name, options) => {
+    Devices.rename(id, name, { ...options, ...program.opts() });
   });
 
 const flows = program.command('flows').description('Manage network flows');
