@@ -1,20 +1,22 @@
 const axios = require('axios');
 
-const getBaseUrl = (domain) => {
+const getCleanDomain = (domain) => {
   const targetDomain = domain || process.env.FIREWALLA_MSP_ID || 'api.firewalla.net';
   const cleanDomain = targetDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  
+
   // Security: Only allow Firewalla domains to prevent token theft
   if (!cleanDomain.endsWith('.firewalla.net') && cleanDomain !== 'api.firewalla.net') {
-    console.error(JSON.stringify({ 
-      error: "Invalid domain", 
-      hint: "For security, only *.firewalla.net domains are allowed" 
+    console.error(JSON.stringify({
+      error: "Invalid domain",
+      hint: "For security, only *.firewalla.net domains are allowed"
     }));
     process.exit(1);
   }
-  
-  return `https://${cleanDomain}/v2`;
+
+  return cleanDomain;
 };
+
+const getBaseUrl = (domain) => `https://${getCleanDomain(domain)}/v2`;
 
 const getClient = (options = {}) => {
   const token = process.env.FIREWALLA_MSP_TOKEN;
@@ -64,4 +66,20 @@ const resolveBoxGid = async (input, options) => {
   process.exit(1);
 };
 
-module.exports = { getClient, resolveBoxGid };
+const getClientV1 = (options = {}) => {
+  const token = process.env.FIREWALLA_MSP_TOKEN;
+  if (!token) {
+    console.error(JSON.stringify({
+      error: "Auth missing.",
+      hint: "Run: export FIREWALLA_MSP_TOKEN='your_msp_api_token_here' or add to .env"
+    }));
+    process.exit(1);
+  }
+
+  return axios.create({
+    baseURL: `https://${getCleanDomain(options.domain)}`,
+    headers: { 'Authorization': `Token ${token}` }
+  });
+};
+
+module.exports = { getClient, getClientV1, resolveBoxGid };
