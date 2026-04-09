@@ -98,6 +98,31 @@ const Rules = {
     }
   },
 
+  create: async (options) => {
+    const gid = await resolveBoxGid(options.box, options);
+    const client = getClient(options);
+
+    const body = { gid, action: options.action, direction: options.direction || 'bidirection' };
+
+    // Target
+    body.target = { type: options.targetType, value: options.targetValue };
+    if (options.dnsOnly !== false) body.target.dnsOnly = true;
+
+    // Scope (optional — omit for global/all devices)
+    if (options.scopeType && options.scopeValue) {
+      body.scope = { type: options.scopeType, value: options.scopeValue };
+    }
+
+    if (options.notes) body.notes = options.notes;
+
+    try {
+      const { data } = await client.post('/rules', body);
+      console.log(JSON.stringify(data, null, 2));
+    } catch (err) {
+      console.error(JSON.stringify({ error: 'Create failed', status: err.response?.status, details: err.response?.data || err.message }));
+    }
+  },
+
   pause: async (id, options) => {
     const gid = await resolveBoxGid(options.box, options);
     const client = getClient(options);

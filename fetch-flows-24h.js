@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * Fetch last 24 hours of flows in 4-hour chunks, write NDJSON to a file.
+ * Fetch last 24 hours of flows in 1-hour chunks, write NDJSON to a file.
  */
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { getClient, resolveBoxGid } = require('./cli/src/api/client');
 
-const CHUNK_HOURS = 4;
+const CHUNK_HOURS = 1;
 const TOTAL_HOURS = 24;
 const BATCH_SIZE = 500;
-const OUTPUT_FILE = path.join(__dirname, `flows_${new Date().toISOString().slice(0,10)}.ndjson`);
+const OUTPUT_DIR = process.env.OUTPUT_DIR || __dirname;
+const OUTPUT_FILE = path.join(OUTPUT_DIR, `flows_${new Date().toISOString().slice(0,10)}.ndjson`);
 
 async function fetchChunk(client, gid, fromTs, toTs, label) {
   let cursor = null;
@@ -26,16 +27,20 @@ async function fetchChunk(client, gid, fromTs, toTs, label) {
     if (cursor) params.cursor = cursor;
 
     let data;
-    let delay = 2000;
-    for (let attempt = 1; attempt <= 5; attempt++) {
+    let delay = 5000;
+    for (let attempt = 1; attempt <= 10; attempt++) {
       try {
-        ({ data } = await client.get('/flows', { params }));
+        ({ data } = await client.get('/flows', {
+          params,
+          headers: { 'Accept-Encoding': 'gzip, deflate, br' },
+          decompress: true,
+        }));
         break;
       } catch (err) {
-        if (err.response?.status === 429 && attempt < 5) {
+        if (err.response?.status === 429 && attempt < 10) {
           process.stderr.write(`[${label}] Rate limited, retrying in ${delay / 1000}s...\n`);
           await new Promise(r => setTimeout(r, delay));
-          delay *= 2;
+          delay = Math.min(delay * 2, 120000);
         } else {
           throw err;
         }
@@ -50,7 +55,7 @@ async function fetchChunk(client, gid, fromTs, toTs, label) {
     cursor = data.next_cursor || null;
 
     process.stdout.write(`[${label}] fetched ${total} flows so far...\r`);
-    if (cursor) await new Promise(r => setTimeout(r, 500));
+    if (cursor) await new Promise(r => setTimeout(r, 1500));
   } while (cursor);
 
   out.end();
@@ -67,7 +72,7 @@ async function main() {
   for (let i = 0; i < TOTAL_HOURS / CHUNK_HOURS; i++) {
     const toTs = now - i * CHUNK_HOURS * 3600;
     const fromTs = toTs - CHUNK_HOURS * 3600;
-    const label = `chunk ${i + 1}/6 (${CHUNK_HOURS * (i + 1) - CHUNK_HOURS}h–${CHUNK_HOURS * (i + 1)}h ago)`;
+    const label = `chunk ${i + 1}/${TOTAL_HOURS / CHUNK_HOURS} (${i}h–${i + 1}h ago)`;
     chunks.push({ fromTs, toTs, label });
   }
 
