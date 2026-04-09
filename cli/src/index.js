@@ -115,6 +115,22 @@ rules
   });
 
 rules
+  .command('create')
+  .description('Create a new firewall rule')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .requiredOption('--action <action>', 'Action: block, allow, disturb, timelimit')
+  .requiredOption('--target-type <type>', 'Target type: domain, ip, app, category, internet, remotePort, targetlist')
+  .requiredOption('--target-value <value>', 'Target value (e.g. domain name, IP, app name)')
+  .option('--direction <dir>', 'Direction: bidirection, inbound, outbound (default: bidirection)')
+  .option('--scope-type <type>', 'Scope type: device, group, network, user (omit for all devices)')
+  .option('--scope-value <value>', 'Scope value (MAC, group ID, network ID, user ID)')
+  .option('--no-dns-only', 'Disable dnsOnly mode (default: enabled for domain targets)')
+  .option('--notes <text>', 'Notes/description for the rule')
+  .action((options) => {
+    Rules.create({ ...options, ...program.opts() });
+  });
+
+rules
   .command('get <id>')
   .description('Get a rule by its numeric ID')
   .option('--box <name|gid>', 'Box Name or GID')

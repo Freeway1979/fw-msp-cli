@@ -109,13 +109,17 @@ def load_flows(path):
     with open(path) as f:
         first_char = f.read(1)
     with open(path) as f:
-        if first_char == "{":
-            data = json.load(f)
-            return data.get("results", [])
-        elif first_char == "[":
+        if first_char == "[":
             return json.load(f)
-        else:
-            # NDJSON
+        elif first_char == "{":
+            # Could be a single JSON object {results:[]} or NDJSON (multiple lines)
+            try:
+                data = json.load(f)
+                return data.get("results", [])
+            except json.JSONDecodeError:
+                pass  # fall through to NDJSON
+        # NDJSON: one JSON object per line
+        with open(path) as f:
             flows, errors = [], 0
             for line in f:
                 line = line.strip()
