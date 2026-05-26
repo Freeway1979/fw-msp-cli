@@ -97,6 +97,27 @@ flows
     Flows.list({ ...options, ...program.opts() });
   });
 
+const msp = program.command('msp').description('MSP-level operations');
+const mspFlows = msp.command('flows').description('MSP flow operations');
+
+mspFlows
+  .command('report')
+  .description('Get latest 24 hours raw flow report')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .option('--output <file>', 'Write report to file instead of stdout')
+  .action((options) => {
+    Flows.report({ ...options, ...program.opts() });
+  });
+
+mspFlows
+  .command('ai-report')
+  .description('Get AI-generated flow report for the latest 24 hours')
+  .option('--box <name|gid>', 'Box Name or GID')
+  .option('--output <file>', 'Write report to file instead of stdout')
+  .action((options) => {
+    Flows.aiReport({ ...options, ...program.opts() });
+  });
+
 const rules = program.command('rules').description('Manage firewall rules');
 
 rules
